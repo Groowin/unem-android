@@ -27,6 +27,16 @@ class MainActivity : Activity() {
             val me = ComponentName(this@MainActivity, BankListener::class.java).flattenToString()
             return flat.split(":").any { TextUtils.equals(it, me) }
         }
+        @JavascriptInterface fun share(text: String) {
+            runOnUiThread {
+                val i = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Үнем көшірмесі")
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                startActivity(Intent.createChooser(i, "Үнем көшірмесін жіберу"))
+            }
+        }
         @JavascriptInterface fun openSettings() {
             runOnUiThread {
                 try { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
