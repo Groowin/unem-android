@@ -3,6 +3,9 @@ package kz.unem.app
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
+import org.json.JSONObject
+import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.provider.Settings
@@ -18,6 +21,8 @@ import android.text.TextUtils
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private val url = "https://groowin.github.io/aqsha-qayda/"
+    private var pendingToken: String? = null
+    private var pageReady = false
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
@@ -35,6 +40,11 @@ class MainActivity : Activity() {
                     putExtra(Intent.EXTRA_TEXT, text)
                 }
                 startActivity(Intent.createChooser(i, "Үнем көшірмесін жіберу"))
+            }
+        }
+        @JavascriptInterface fun googleSignIn() {
+            runOnUiThread {
+                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url + "auth.html"))) } catch (e: Exception) {}
             }
         }
         @JavascriptInterface fun openSettings() {
@@ -62,12 +72,35 @@ class MainActivity : Activity() {
                 if (r.url.host == "groowin.github.io") return false
                 startActivity(Intent(Intent.ACTION_VIEW, r.url)); return true
             }
+            override fun onPageStarted(v: WebView, u: String?, f: Bitmap?) { pageReady = false }
+            override fun onPageFinished(v: WebView, u: String?) { pageReady = true; deliverToken() }
             override fun onReceivedError(v: WebView, r: WebResourceRequest, e: WebResourceError) {
                 // Желі жоқ болса кэштен ашуға тырысамыз
                 if (r.isForMainFrame) { v.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK; v.loadUrl(url) }
             }
         }
         web.loadUrl(url)
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(i: Intent) {
+        super.onNewIntent(i)
+        handleIntent(i)
+    }
+
+    private fun handleIntent(i: Intent?) {
+        val d = i?.data ?: return
+        if (d.scheme == "unem") {
+            val tok = d.fragment
+            if (!tok.isNullOrEmpty()) { pendingToken = tok; deliverToken() }
+        }
+    }
+
+    private fun deliverToken() {
+        val t = pendingToken ?: return
+        if (!pageReady) return
+        pendingToken = null
+        web.evaluateJavascript("window.unemAuth && window.unemAuth(" + JSONObject.quote(t) + ")", null)
     }
 
     override fun onBackPressed() { if (web.canGoBack()) web.goBack() else super.onBackPressed() }
