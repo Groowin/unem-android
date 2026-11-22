@@ -12,7 +12,19 @@ class BankListener : NotificationListenerService() {
     private val money = Regex("₸|тг\\b|тг\\.|kzt|тенге|тңг", RegexOption.IGNORE_CASE)
     private val bankPkg = Regex("kaspi|ffin|freedom|bcc|halyk|homebank|walletnfcrel|jusan|eurasian|forte|bank", RegexOption.IGNORE_CASE)
 
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
+    override fun onListenerConnected() {
+        // Қосылғанда шторкада тұрған хабарламаларды да қарап шығу (өткізіп алғандарды қайтарады)
+        try { activeNotifications?.forEach { handle(it) } } catch (e: Exception) {}
+    }
+
+    override fun onListenerDisconnected() {
+        // Жүйе байланысты үзсе, қайта қосылуды сұрау
+        try { requestRebind(android.content.ComponentName(this, BankListener::class.java)) } catch (e: Exception) {}
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification) = handle(sbn)
+
+    private fun handle(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
         val n = sbn.notification ?: return
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return

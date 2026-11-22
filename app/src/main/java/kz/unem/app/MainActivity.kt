@@ -17,6 +17,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.content.ComponentName
 import android.text.TextUtils
+import android.os.PowerManager
+import android.service.notification.NotificationListenerService
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -32,6 +34,18 @@ class MainActivity : Activity() {
             val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
             val me = ComponentName(this@MainActivity, BankListener::class.java).flattenToString()
             return flat.split(":").any { TextUtils.equals(it, me) }
+        }
+        @JavascriptInterface fun batteryOk(): Boolean = try {
+            (getSystemService(POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
+        } catch (e: Exception) { true }
+        @JavascriptInterface fun askBattery() {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+                } catch (e: Exception) {
+                    try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } catch (e2: Exception) {}
+                }
+            }
         }
         @JavascriptInterface fun share(text: String) {
             runOnUiThread {
@@ -54,6 +68,11 @@ class MainActivity : Activity() {
                 catch (e: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        try { NotificationListenerService.requestRebind(ComponentName(this, BankListener::class.java)) } catch (e: Exception) {}
     }
 
     @SuppressLint("SetJavaScriptEnabled")
