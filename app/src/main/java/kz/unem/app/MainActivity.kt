@@ -26,6 +26,7 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
+        @JavascriptInterface fun log(): String = Store.log(this@MainActivity)
         @JavascriptInterface fun ack(ids: String) { try { Store.ack(this@MainActivity, ids) } catch (e: Exception) {} }
         @JavascriptInterface fun listenerEnabled(): Boolean {
             val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false

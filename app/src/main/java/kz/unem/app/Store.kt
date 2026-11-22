@@ -40,4 +40,26 @@ object Store {
         }
         sp.edit().putString(K, out.toString()).apply()
     }
+
+    private const val LK = "log"
+
+    /** Соңғы 40 ұсталған/өткізілген хабарлама (диагностика үшін, тек осы телефонда). */
+    @Synchronized
+    fun log(ctx: Context, pkg: String, title: String, text: String, ts: Long, ok: Boolean) {
+        val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
+        val arr = JSONArray(sp.getString(LK, "[]"))
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            if (o.optString("pkg") == pkg && o.optLong("ts") == ts && o.optString("text") == text) return
+        }
+        arr.put(JSONObject().put("pkg", pkg).put("title", title).put("text", text).put("ts", ts).put("ok", ok))
+        val out = JSONArray()
+        val from = maxOf(0, arr.length() - 40)
+        for (i in from until arr.length()) out.put(arr.get(i))
+        sp.edit().putString(LK, out.toString()).apply()
+    }
+
+    @Synchronized
+    fun log(ctx: Context): String =
+        ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(LK, "[]") ?: "[]"
 }
