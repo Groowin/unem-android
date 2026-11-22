@@ -35,6 +35,30 @@ class MainActivity : Activity() {
             val me = ComponentName(this@MainActivity, BankListener::class.java).flattenToString()
             return flat.split(":").any { TextUtils.equals(it, me) }
         }
+        @JavascriptInterface fun http(id: String, method: String, url: String, auth: String, body: String) {
+            // Groq браузерден CORS-ты қабылдамайды, сондықтан сұрауды native жібереді
+            Thread {
+                var code = -1
+                var resp = ""
+                try {
+                    val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    c.requestMethod = method
+                    c.connectTimeout = 15000
+                    c.readTimeout = 30000
+                    c.setRequestProperty("Content-Type", "application/json")
+                    if (auth.isNotEmpty()) c.setRequestProperty("Authorization", auth)
+                    if (method == "POST") {
+                        c.doOutput = true
+                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    }
+                    code = c.responseCode
+                    val st = if (code in 200..299) c.inputStream else c.errorStream
+                    resp = st?.bufferedReader()?.use { it.readText() } ?: ""
+                } catch (e: Exception) { resp = e.message ?: "" }
+                val js = "window.__nf&&window.__nf(" + JSONObject.quote(id) + "," + code + "," + JSONObject.quote(resp) + ")"
+                runOnUiThread { web.evaluateJavascript(js, null) }
+            }.start()
+        }
         @JavascriptInterface fun batteryOk(): Boolean = try {
             (getSystemService(POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
         } catch (e: Exception) { true }
