@@ -10,7 +10,7 @@ import android.service.notification.StatusBarNotification
  */
 class BankListener : NotificationListenerService() {
     private val money = Regex("₸|тг\\b|тг\\.|kzt|тенге|тңг", RegexOption.IGNORE_CASE)
-    private val bankPkg = Regex("kaspi|ffin|freedom|bcc|halyk|homebank|walletnfcrel|jusan|eurasian|forte|bank", RegexOption.IGNORE_CASE)
+    private val bankPkg = Regex("kaspi|ffin|freedom|bcc|centercredit|halyk|homebank|walletnfcrel|google\\.android\\.apps\\.wallet|jusan|eurasian|forte|bereke|alatau|nurbank|tengri|bank", RegexOption.IGNORE_CASE)
 
     override fun onListenerConnected() {
         // Қосылғанда шторкада тұрған хабарламаларды да қарап шығу (өткізіп алғандарды қайтарады)
@@ -36,7 +36,8 @@ class BankListener : NotificationListenerService() {
         val isMoney = money.containsMatchIn(all)
         // Банк қосымшасынан келген кез келген хабарлама журналға жазылады (диагностика)
         if (isMoney || bankPkg.containsMatchIn(sbn.packageName)) Store.log(this, sbn.packageName, title, text, sbn.postTime, isMoney)
-        if (!isMoney) return
+        // Тек банк / карта қосымшаларының хабарламалары жазылады; басқа қосымшалардағы ₸ ескерілмейді
+        if (!isMoney || !bankPkg.containsMatchIn(sbn.packageName)) return
         val id = sbn.packageName + ":" + sbn.postTime + ":" + all.hashCode()
         if (Store.add(this, id, sbn.packageName, title, text, sbn.postTime)) Notifier.notify(this, id, title, text, sbn.postTime)
     }
