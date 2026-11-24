@@ -11,15 +11,16 @@ object Store {
     private const val MAX = 500
 
     @Synchronized
-    fun add(ctx: Context, id: String, pkg: String, title: String, text: String, ts: Long) {
+    fun add(ctx: Context, id: String, pkg: String, title: String, text: String, ts: Long): Boolean {
         val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
         val arr = JSONArray(sp.getString(K, "[]"))
-        for (i in 0 until arr.length()) if (arr.getJSONObject(i).optString("id") == id) return
+        for (i in 0 until arr.length()) if (arr.getJSONObject(i).optString("id") == id) return false
         arr.put(JSONObject().put("id", id).put("pkg", pkg).put("title", title).put("text", text).put("ts", ts))
         val out = JSONArray()
         val from = maxOf(0, arr.length() - MAX)
         for (i in from until arr.length()) out.put(arr.get(i))
         sp.edit().putString(K, out.toString()).apply()
+        return true
     }
 
     @Synchronized
@@ -62,4 +63,26 @@ object Store {
     @Synchronized
     fun log(ctx: Context): String =
         ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(LK, "[]") ?: "[]"
+
+    private const val RK = "rules"
+    private const val CK = "corr"
+
+    @Synchronized fun setRules(ctx: Context, json: String) {
+        try { JSONObject(json); ctx.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString(RK, json).apply() } catch (e: Exception) {}
+    }
+    @Synchronized fun rules(ctx: Context): String = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(RK, "{}") ?: "{}"
+
+    @Synchronized fun addCorr(ctx: Context, nid: String, cat: String) {
+        val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
+        val arr = JSONArray(sp.getString(CK, "[]"))
+        arr.put(JSONObject().put("nid", nid).put("cat", cat))
+        sp.edit().putString(CK, arr.toString()).apply()
+    }
+    @Synchronized fun corr(ctx: Context): String = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(CK, "[]") ?: "[]"
+    @Synchronized fun ackCorr(ctx: Context, n: Int) {
+        val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
+        val arr = JSONArray(sp.getString(CK, "[]")); val out = JSONArray()
+        for (i in n until arr.length()) out.put(arr.get(i))
+        sp.edit().putString(CK, out.toString()).apply()
+    }
 }

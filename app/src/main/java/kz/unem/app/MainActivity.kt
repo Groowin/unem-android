@@ -7,6 +7,7 @@ import android.net.Uri
 import org.json.JSONObject
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.webkit.JavascriptInterface
@@ -28,6 +29,9 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
+        @JavascriptInterface fun setRules(json: String) { Store.setRules(this@MainActivity, json) }
+        @JavascriptInterface fun corrections(): String = Store.corr(this@MainActivity)
+        @JavascriptInterface fun ackCorr(n: Int) { Store.ackCorr(this@MainActivity, n) }
         @JavascriptInterface fun log(): String = Store.log(this@MainActivity)
         @JavascriptInterface fun ack(ids: String) { try { Store.ack(this@MainActivity, ids) } catch (e: Exception) {} }
         @JavascriptInterface fun listenerEnabled(): Boolean {
@@ -102,6 +106,8 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 7)
         web = WebView(this)
         setContentView(web)
         web.settings.apply {

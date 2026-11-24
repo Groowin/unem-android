@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="Үнем"
@@ -21,6 +22,7 @@
                 <data android:scheme="unem" android:host="auth" />
             </intent-filter>
         </activity>
+        <receiver android:name=".CorrectionReceiver" android:exported="false"/>
         <service android:name=".BankListener" android:exported="true"
             android:label="Үнем"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">

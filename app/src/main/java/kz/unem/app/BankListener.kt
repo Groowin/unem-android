@@ -38,6 +38,6 @@ class BankListener : NotificationListenerService() {
         if (isMoney || bankPkg.containsMatchIn(sbn.packageName)) Store.log(this, sbn.packageName, title, text, sbn.postTime, isMoney)
         if (!isMoney) return
         val id = sbn.packageName + ":" + sbn.postTime + ":" + all.hashCode()
-        Store.add(this, id, sbn.packageName, title, text, sbn.postTime)
+        if (Store.add(this, id, sbn.packageName, title, text, sbn.postTime)) Notifier.notify(this, id, title, text, sbn.postTime)
     }
 }
