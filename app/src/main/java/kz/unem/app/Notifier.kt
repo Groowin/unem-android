@@ -3,6 +3,7 @@ package kz.unem.app
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -100,21 +101,28 @@ object Notifier {
                 .setCategory(Notification.CATEGORY_STATUS).setTimeoutAfter(6 * 3600_000L)
             var n = 0
             for ((c, name) in NAMES) {
-                if (c == cat || c == "other" && cat != "other" && n >= 2) continue
-                if (n >= 3) break
+                if (c == cat || c == "other" && cat != "other") continue
+                if (n >= 2) break
                 val i = Intent(ctx, CorrectionReceiver::class.java).setAction(ACT).putExtra("nid", nid).putExtra("cat", c).putExtra("sum", sum).putExtra("merch", merch)
                 b.addAction(0, name, PendingIntent.getBroadcast(ctx, h * 31 + c.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                 n++
+            }
+            if (Build.VERSION.SDK_INT >= 24) {
+                val ri = RemoteInput.Builder("reply").setLabel("Не үшін? (мысалы: шашлык)").build()
+                val ri2 = Intent(ctx, CorrectionReceiver::class.java).setAction(ACT).putExtra("nid", nid).putExtra("sum", sum).putExtra("merch", merch)
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+                val pi = PendingIntent.getBroadcast(ctx, h * 31 + 7, ri2, flags)
+                b.addAction(Notification.Action.Builder(0, "Жауап", pi).addRemoteInput(ri).build())
             }
             nm.notify(h, b.build())
         } catch (e: SecurityException) {} catch (e: Exception) {}
     }
 
-    fun confirm(ctx: Context, nid: String, sum: Long, merch: String, cat: String) {
+    fun confirm(ctx: Context, nid: String, sum: Long, merch: String, cat: String, reply: String = "") {
         try {
             channel(ctx)
             val n = Notification.Builder(ctx, CH).setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("✓ " + (NAMES[cat] ?: "Басқа"))
+                .setContentTitle(if (reply.isNotEmpty()) "✓ " + reply else "✓ " + (NAMES[cat] ?: "Басқа"))
                 .setContentText("−" + money(sum) + (if (merch.isNotEmpty()) " · $merch" else "") + " — санат сақталды, Үнем үйренді")
                 .setAutoCancel(true).setTimeoutAfter(8000).setOnlyAlertOnce(true).build()
             ctx.getSystemService(NotificationManager::class.java).notify(nid.hashCode(), n)

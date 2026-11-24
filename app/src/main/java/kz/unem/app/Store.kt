@@ -72,10 +72,10 @@ object Store {
     }
     @Synchronized fun rules(ctx: Context): String = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(RK, "{}") ?: "{}"
 
-    @Synchronized fun addCorr(ctx: Context, nid: String, cat: String) {
+    @Synchronized fun addCorr(ctx: Context, nid: String, cat: String, text: String = "") {
         val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
         val arr = JSONArray(sp.getString(CK, "[]"))
-        arr.put(JSONObject().put("nid", nid).put("cat", cat))
+        arr.put(JSONObject().put("nid", nid).put("cat", cat).put("text", text))
         sp.edit().putString(CK, arr.toString()).apply()
     }
     @Synchronized fun corr(ctx: Context): String = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(CK, "[]") ?: "[]"
