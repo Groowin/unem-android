@@ -29,6 +29,19 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
+        @JavascriptInterface fun setBars(bg: String, darkIcons: Boolean) {
+            runOnUiThread {
+                try {
+                    val c = android.graphics.Color.parseColor(bg)
+                    window.statusBarColor = c
+                    window.navigationBarColor = c
+                    var f = window.decorView.systemUiVisibility
+                    f = if (darkIcons) f or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else f and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                    if (android.os.Build.VERSION.SDK_INT >= 26) f = if (darkIcons) f or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else f and android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                    window.decorView.systemUiVisibility = f
+                } catch (e: Exception) {}
+            }
+        }
         @JavascriptInterface fun setRules(json: String) { Store.setRules(this@MainActivity, json) }
         @JavascriptInterface fun corrections(): String = Store.corr(this@MainActivity)
         @JavascriptInterface fun ackCorr(n: Int) { Store.ackCorr(this@MainActivity, n) }
