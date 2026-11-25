@@ -12,6 +12,8 @@ class BankListener : NotificationListenerService() {
     private val money = Regex("₸|тг\\b|тг\\.|kzt|тенге|тңг", RegexOption.IGNORE_CASE)
     private val bankPkg = Regex("kaspi|ffin|freedom|bcc|centercredit|halyk|homebank|walletnfcrel|google\\.android\\.apps\\.wallet|jusan|eurasian|forte|bereke|alatau|nurbank|tengri|bank", RegexOption.IGNORE_CASE)
 
+    private val cardLike = Regex("(карт[аыуе]?|card)\\s*\\d?\\*+\\d{3,4}|\\*{1,}\\d{4}|доступно|остаток|қалдық|баланс", RegexOption.IGNORE_CASE)
+
     override fun onListenerConnected() {
         // Қосылғанда шторкада тұрған хабарламаларды да қарап шығу (өткізіп алғандарды қайтарады)
         try { activeNotifications?.forEach { handle(it) } } catch (e: Exception) {}
@@ -37,7 +39,7 @@ class BankListener : NotificationListenerService() {
         // Банк қосымшасынан келген кез келген хабарлама журналға жазылады (диагностика)
         if (isMoney || bankPkg.containsMatchIn(sbn.packageName)) Store.log(this, sbn.packageName, title, text, sbn.postTime, isMoney)
         // Тек банк / карта қосымшаларының хабарламалары жазылады; басқа қосымшалардағы ₸ ескерілмейді
-        if (!isMoney || !bankPkg.containsMatchIn(sbn.packageName)) return
+        if (!isMoney || !(bankPkg.containsMatchIn(sbn.packageName) || cardLike.containsMatchIn(all))) return
         val id = sbn.packageName + ":" + sbn.postTime + ":" + all.hashCode()
         if (Store.add(this, id, sbn.packageName, title, text, sbn.postTime)) Notifier.notify(this, id, title, text, sbn.postTime)
     }
