@@ -75,10 +75,18 @@ object Store {
     @Synchronized fun addCorr(ctx: Context, nid: String, cat: String, text: String = "") {
         val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
         val arr = JSONArray(sp.getString(CK, "[]"))
-        arr.put(JSONObject().put("nid", nid).put("cat", cat).put("text", text))
+        arr.put(JSONObject().put("nid", nid).put("cat", cat).put("text", text).put("ts", System.currentTimeMillis()))
         sp.edit().putString(CK, arr.toString()).apply()
     }
-    @Synchronized fun corr(ctx: Context): String = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getString(CK, "[]") ?: "[]"
+    @Synchronized fun corr(ctx: Context): String {
+        // 24 сағаттан асқан, сәйкес жазбасы табылмаған түзетулер өшіріледі (кезек тұрып қалмасын)
+        val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
+        val arr = JSONArray(sp.getString(CK, "[]") ?: "[]")
+        val now = System.currentTimeMillis(); val out = JSONArray()
+        for (i in 0 until arr.length()) { val o = arr.getJSONObject(i); if (now - o.optLong("ts", now) < 24 * 3600_000L) out.put(o) }
+        if (out.length() != arr.length()) sp.edit().putString(CK, out.toString()).apply()
+        return out.toString()
+    }
     @Synchronized fun ackCorr(ctx: Context, n: Int) {
         val sp = ctx.getSharedPreferences(P, Context.MODE_PRIVATE)
         val arr = JSONArray(sp.getString(CK, "[]")); val out = JSONArray()
