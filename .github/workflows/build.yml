@@ -17,7 +17,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
+      - name: Қолтаңба кілті (keystore)
+        env:
+          KS_B64: ${{ secrets.UNEM_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/unem.jks"
+            echo "UNEM_KS_PATH=$RUNNER_TEMP/unem.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::UNEM_KEYSTORE_B64 жоқ — APK уақытша debug кілтімен қол қойылады"
+          fi
       - run: gradle assembleDebug --no-daemon
+        env:
+          UNEM_KS_PASS: ${{ secrets.UNEM_KS_PASS }}
       - uses: actions/upload-artifact@v4
         with:
           name: Unem-apk

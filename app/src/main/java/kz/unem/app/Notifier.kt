@@ -27,7 +27,7 @@ object Notifier {
         "subs" to Regex("netflix|spotify|youtube|apple\\.com|itunes|icloud|chatgpt|openai|подписк|жазылым|okko|kinopoisk", RegexOption.IGNORE_CASE),
         "telecom" to Regex("beeline|билайн|kcell|activ\\b|tele2|altel|мобильн|байланыс|интернет", RegexOption.IGNORE_CASE),
         "transport" to Regex("yandex ?go|яндекс|indrive|такси|taxi|бензин|азс|helios|sinooil|парковк|автобус|onay", RegexOption.IGNORE_CASE),
-        "food" to Regex("magnum|small|galmart|market|маркет|продукт|кафе|cafe|coffee|кофе|pizza|пицц|burger|restaurant|ресторан|kfc|dodo|еда|food|хлеб|пекарн|sushi|суши|шашлык", RegexOption.IGNORE_CASE),
+        "food" to Regex("magnum|small|galmart|market|маркет|продукт|кафе|cafe|coffee|кофе|pizza|пицц|burger|restaurant|ресторан|kfc|dodo|(?<![а-яәіңғүұқөһё])еда|food|хлеб|пекарн|sushi|суши|шашлык", RegexOption.IGNORE_CASE),
         "health" to Regex("аптека|pharm|фарм|дәріхана|клиника|больница|стоматолог", RegexOption.IGNORE_CASE),
         "shop" to Regex("zara|lcw|wildberries|ozon|aliexpress|temu|mechta|sulpak|технодом|одежд|kaspi магазин", RegexOption.IGNORE_CASE),
         "transfer" to Regex("перевод|аударым|transfer", RegexOption.IGNORE_CASE)

@@ -26,6 +26,8 @@ class MainActivity : Activity() {
     private val url = "https://groowin.github.io/aqsha-qayda/"
     private var pendingToken: String? = null
     private var pageReady = false
+    private var retried = false
+    private val HTTP_HOSTS = setOf("api.groq.com", "open.er-api.com")
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
@@ -54,11 +56,14 @@ class MainActivity : Activity() {
         }
         @JavascriptInterface fun http(id: String, method: String, url: String, auth: String, body: String) {
             // Groq браузерден CORS-ты қабылдамайды, сондықтан сұрауды native жібереді
+            // Тек сенімді хосттарға (https) рұқсат: көпір арқылы кез келген сайтқа сұрау жіберуге болмайды
+            val allowed = try { val u = java.net.URL(url); u.protocol == "https" && u.host in HTTP_HOSTS } catch (e: Exception) { false }
             Thread {
                 var code = -1
-                var resp = ""
-                try {
+                var resp = if (allowed) "" else "blocked"
+                if (allowed) { try {
                     val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    c.instanceFollowRedirects = false
                     c.requestMethod = method
                     c.connectTimeout = 15000
                     c.readTimeout = 30000
@@ -71,7 +76,7 @@ class MainActivity : Activity() {
                     code = c.responseCode
                     val st = if (code in 200..299) c.inputStream else c.errorStream
                     resp = st?.bufferedReader()?.use { it.readText() } ?: ""
-                } catch (e: Exception) { resp = e.message ?: "" }
+                } catch (e: Exception) { resp = e.message ?: "" } }
                 val js = "window.__nf&&window.__nf(" + JSONObject.quote(id) + "," + code + "," + JSONObject.quote(resp) + ")"
                 runOnUiThread { web.evaluateJavascript(js, null) }
             }.start()
@@ -100,7 +105,12 @@ class MainActivity : Activity() {
         }
         @JavascriptInterface fun googleSignIn() {
             runOnUiThread {
-                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url + "auth.html"))) } catch (e: Exception) {}
+                try {
+                    // Бір реттік код (nonce): басқа қосымша/сілтеме жалған токен жібермесін
+                    val nonce = java.util.UUID.randomUUID().toString()
+                    getSharedPreferences("unem_auth", MODE_PRIVATE).edit().putString("n", nonce).putLong("t", System.currentTimeMillis()).apply()
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url + "auth.html?s=" + nonce)))
+                } catch (e: Exception) {}
             }
         }
         @JavascriptInterface fun openSettings() {
@@ -114,6 +124,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         try { NotificationListenerService.requestRebind(ComponentName(this, BankListener::class.java)) } catch (e: Exception) {}
+        if (::web.isInitialized) { retried = false; web.settings.cacheMode = WebSettings.LOAD_DEFAULT }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -132,14 +143,15 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(Bridge(), "UnemNative")
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
-                if (r.url.host == "groowin.github.io") return false
+                // Көпір (UnemNative) тек Үнем бетінде ғана жұмыс істейді: сыртқы және осы доменнің басқа беттері браузерде ашылады
+                if (r.url.scheme == "https" && r.url.host == "groowin.github.io" && (r.url.path ?: "").startsWith("/aqsha-qayda/")) return false
                 startActivity(Intent(Intent.ACTION_VIEW, r.url)); return true
             }
             override fun onPageStarted(v: WebView, u: String?, f: Bitmap?) { pageReady = false }
             override fun onPageFinished(v: WebView, u: String?) { pageReady = true; deliverToken() }
             override fun onReceivedError(v: WebView, r: WebResourceRequest, e: WebResourceError) {
                 // Желі жоқ болса кэштен ашуға тырысамыз
-                if (r.isForMainFrame) { v.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK; v.loadUrl(url) }
+                if (r.isForMainFrame && !retried) { retried = true; v.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK; v.loadUrl(url) }
             }
         }
         web.loadUrl(url)
@@ -155,7 +167,13 @@ class MainActivity : Activity() {
         val d = i?.data ?: return
         if (d.scheme == "unem") {
             val tok = d.fragment
-            if (!tok.isNullOrEmpty()) { pendingToken = tok; deliverToken() }
+            val sp = getSharedPreferences("unem_auth", MODE_PRIVATE)
+            val n = sp.getString("n", null)
+            val fresh = System.currentTimeMillis() - sp.getLong("t", 0) < 15 * 60_000
+            if (!tok.isNullOrEmpty() && n != null && fresh && n == d.getQueryParameter("s")) {
+                sp.edit().remove("n").apply()
+                pendingToken = tok; deliverToken()
+            }
         }
     }
 
