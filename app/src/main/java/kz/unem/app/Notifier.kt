@@ -95,6 +95,7 @@ object Notifier {
     }
 
     fun notify(ctx: Context, nid: String, title: String, text: String, ts: Long) {
+        if (!Store.notifyOn(ctx)) return
         try {
             val p = parse(title, text) ?: return
             val (sum, merch, income) = p

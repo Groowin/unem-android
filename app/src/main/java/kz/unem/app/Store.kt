@@ -93,4 +93,8 @@ object Store {
         for (i in n until arr.length()) out.put(arr.get(i))
         sp.edit().putString(CK, out.toString()).apply()
     }
+
+    /** «Үнем» хабарламасын (санат батырмалары бар) көрсету/көрсетпеу. Жазбаларды оқу әрқашан жұмыс істейді. */
+    fun notifyOn(ctx: Context): Boolean = ctx.getSharedPreferences(P, Context.MODE_PRIVATE).getBoolean("notify", true)
+    fun setNotify(ctx: Context, on: Boolean) { ctx.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putBoolean("notify", on).apply() }
 }

@@ -49,6 +49,8 @@ class MainActivity : Activity() {
         @JavascriptInterface fun ackCorr(n: Int) { Store.ackCorr(this@MainActivity, n) }
         @JavascriptInterface fun log(): String = Store.log(this@MainActivity)
         @JavascriptInterface fun ack(ids: String) { try { Store.ack(this@MainActivity, ids) } catch (e: Exception) {} }
+        @JavascriptInterface fun notifyOn(): Boolean = Store.notifyOn(this@MainActivity)
+        @JavascriptInterface fun setNotify(on: Boolean) { Store.setNotify(this@MainActivity, on) }
         @JavascriptInterface fun listenerEnabled(): Boolean {
             val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
             val me = ComponentName(this@MainActivity, BankListener::class.java).flattenToString()
