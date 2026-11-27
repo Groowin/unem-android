@@ -23,6 +23,7 @@ import android.service.notification.NotificationListenerService
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private fun callBio(ok: Boolean) { runOnUiThread { web.evaluateJavascript("window.__bio && window.__bio(" + ok + ")", null) } }
     private val url = "https://groowin.github.io/aqsha-qayda/"
     private var pendingToken: String? = null
     private var pageReady = false
@@ -49,6 +50,29 @@ class MainActivity : Activity() {
         @JavascriptInterface fun ackCorr(n: Int) { Store.ackCorr(this@MainActivity, n) }
         @JavascriptInterface fun log(): String = Store.log(this@MainActivity)
         @JavascriptInterface fun ack(ids: String) { try { Store.ack(this@MainActivity, ids) } catch (e: Exception) {} }
+        @JavascriptInterface fun biometricAvailable(): Boolean {
+            if (Build.VERSION.SDK_INT < 29) return false
+            return try {
+                val bm = getSystemService(android.hardware.biometrics.BiometricManager::class.java)
+                bm != null && bm.canAuthenticate() == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS
+            } catch (e: Exception) { false }
+        }
+        @JavascriptInterface fun biometric() {
+            if (Build.VERSION.SDK_INT < 29) { callBio(false); return }
+            runOnUiThread {
+                try {
+                    val ex = mainExecutor
+                    val prompt = android.hardware.biometrics.BiometricPrompt.Builder(this@MainActivity)
+                        .setTitle("Үнем")
+                        .setNegativeButton("PIN енгізу", ex) { _, _ -> callBio(false) }
+                        .build()
+                    prompt.authenticate(android.os.CancellationSignal(), ex, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) { callBio(true) }
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { callBio(false) }
+                    })
+                } catch (e: Exception) { callBio(false) }
+            }
+        }
         @JavascriptInterface fun notifyOn(): Boolean = Store.notifyOn(this@MainActivity)
         @JavascriptInterface fun setNotify(on: Boolean) { Store.setNotify(this@MainActivity, on) }
         @JavascriptInterface fun listenerEnabled(): Boolean {
