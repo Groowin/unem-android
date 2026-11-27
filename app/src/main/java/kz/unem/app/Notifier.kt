@@ -37,6 +37,22 @@ object Notifier {
 
     private val recent = ArrayList<Pair<Long, Long>>() // amount to ts (Wallet + банк екі хабарлама бермеуі үшін)
 
+    private val tailRe = Regex("(доступно|баланс|остаток|қалдық|қолжетімді|available)[\\s\\S]*$", RegexOption.IGNORE_CASE)
+    private val bankOnly = Regex("^\\s*(kaspi\\s*(gold|pay|red|bank)?|freedom\\s*(bank)?|halyk|bcc|jusan)\\s*$", RegexOption.IGNORE_CASE)
+
+    // Хабарламадан тек сатушы атауын алады (сома, баланс, карта мәтінін қиып тастайды)
+    fun cleanMerch(title: String, text: String): String {
+        var s = ((if (bankOnly.matches(title)) "" else title) + " " + text)
+            .replace(tailRe, " ").replace(amt, " ")
+            .replace(Regex("списано с\\s*\\S+\\s*\\*+\\d{3,4}", RegexOption.IGNORE_CASE), " ")
+            .replace(Regex("\\s+с\\s+карты(?=\\s|$)[\\s\\S]*$", RegexOption.IGNORE_CASE), " ")
+            .replace(Regex("\\s+"), " ").trim()
+        s = s.replace(Regex("^\\s*(покупка|оплата|платеж|платёж|purchase|төлем|сатып алу)\\s*[:\\-]?\\s*", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^(?:IP|ИП|ТОО|TOO|LLP|AO|АО)\\s+"), "")
+            .replace(Regex("^[\\s,.;:·\\-–—|]+|[\\s,.;:·\\-–—|]+$"), "")
+        return s.take(40)
+    }
+
     fun parse(title: String, text: String): Triple<Long, String, Boolean>? {
         val all = "$title $text"
         var found: Long? = null
@@ -50,7 +66,8 @@ object Notifier {
         val sum = found ?: return null
         if (sum <= 0) return null
         val income = incomeRe.containsMatchIn(all)
-        var merch = merchRe.find(all)?.groupValues?.get(1)?.trim() ?: ""
+        var merch = cleanMerch(title, text)
+        if (merch.isEmpty()) merch = merchRe.find(all)?.groupValues?.get(1)?.trim() ?: ""
         if (merch.isEmpty()) merch = text.replace(amt, "").replace(Regex("\\s+"), " ").trim().take(40)
         return Triple(sum, merch, income)
     }
