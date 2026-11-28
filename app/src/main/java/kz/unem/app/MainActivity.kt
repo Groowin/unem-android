@@ -28,7 +28,7 @@ class MainActivity : Activity() {
     private var pendingToken: String? = null
     private var pageReady = false
     private var retried = false
-    private val HTTP_HOSTS = setOf("api.groq.com", "open.er-api.com")
+    private val HTTP_HOSTS = setOf("api.groq.com", "open.er-api.com", "news.google.com")
 
     inner class Bridge {
         @JavascriptInterface fun pending(): String = Store.pending(this@MainActivity)
