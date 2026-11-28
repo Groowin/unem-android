@@ -21,7 +21,9 @@ object Notifier {
     )
     private val amt = Regex("(\\d[\\d\\s\\u00a0.,]*\\d|\\d)\\s*(₸|тг\\.?|kzt|тенге|тңг)", RegexOption.IGNORE_CASE)
     private val skipBefore = Regex("баланс|остаток|доступно|қалдық|лимит|комисс", RegexOption.IGNORE_CASE)
-    private val incomeRe = Regex("пополнени|поступлени|зачислени|возврат|кіріс|толықтыр|получил|перевод от|түсті", RegexOption.IGNORE_CASE)
+    private val incomeRe = Regex("пополнени|поступлени|поступил|зачислен|возврат|кіріс|толықтыр|получил|получен|перевод от|вам перевели|входящ|түсті|келді|жалақы|зарплат", RegexOption.IGNORE_CASE)
+    private val plusAmt = Regex("(?:^|[\\s:(])\\+\\s*\\d")
+    private val phoneTopup = Regex("пополнени[а-яё]*[\\s:.,\\-]*(?:мобильн|телефон|номер|связ|интернет|beeline|билайн|activ|актив|altel|алтел|tele2|теле2)", RegexOption.IGNORE_CASE)
     private val merchRe = Regex("(?:покупка|оплата|платеж|платёж|purchase|төлем|сатып алу)[:\\s]+(.{2,40}?)(?:\\.|,|;|\\sдоступно|\\sбаланс|\\sостаток|$)", RegexOption.IGNORE_CASE)
     private val KW = listOf(
         "subs" to Regex("netflix|spotify|youtube|apple\\.com|itunes|icloud|chatgpt|openai|подписк|жазылым|okko|kinopoisk", RegexOption.IGNORE_CASE),
@@ -65,7 +67,7 @@ object Notifier {
         }
         val sum = found ?: return null
         if (sum <= 0) return null
-        val income = incomeRe.containsMatchIn(all)
+        val income = (incomeRe.containsMatchIn(all) || plusAmt.containsMatchIn(all)) && !phoneTopup.containsMatchIn(all)
         var merch = cleanMerch(title, text)
         if (merch.isEmpty()) merch = merchRe.find(all)?.groupValues?.get(1)?.trim() ?: ""
         if (merch.isEmpty()) merch = text.replace(amt, "").replace(Regex("\\s+"), " ").trim().take(40)
